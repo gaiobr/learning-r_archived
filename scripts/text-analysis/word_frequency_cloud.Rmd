@@ -1,0 +1,124 @@
+---
+title: "Frequência das palavras e nuvem de palavras"
+author: "Guedes-Santos, J"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+gc()
+```
+
+# Frequência das palavras e nuvem de palavras
+
+Reference: 
+
+https://www.ufrgs.br/wiki-r/index.php?title=Frequ%C3%AAncia_das_palavras_e_nuvem_de_palavras
+
+## Índice
+
+1 Pacotes
+
+2 Função para normalizar texto
+
+3 Stop words
+
+4 Tabela de palavras
+
+5 Nuvem de palavras
+
+### Pacotes
+
+```{r libraries}
+# Instala pacotes
+#install.packages(c("wordcloud", "tm", "textreadr", "tidytext"), dependencies = TRUE)
+
+# Manipulacao eficiente de dados
+library(tidyverse)
+
+# Manipulacao eficiente de texto
+library(tidytext)
+
+# Leitura de pdf para texto
+library(textreadr)
+
+# Pacote de mineracao de texto com stopwords 
+library(tm)
+
+# Grafico nuvem de palavras
+library(wordcloud)
+```
+
+### Função para normalizar texto
+
+```{r function text}
+# Função para normalizar texto
+NormalizaParaTextMining <- function(texto){
+  
+  # Normaliza texto
+  texto %>% 
+    chartr(
+      old = "áéíóúÁÉÍÓÚýÝàèìòùÀÈÌÒÙâêîôûÂÊÎÔÛãõÃÕñÑäëïöüÄËÏÖÜÿçÇ´`^~¨:.!?&$@#0123456789",
+      new = "aeiouAEIOUyYaeiouAEIOUaeiouAEIOUaoAOnNaeiouAEIOUycC                       ",
+      x = .) %>% # Elimina acentos e caracteres desnecessarios
+    str_squish() %>% # Elimina espacos excedentes 
+    tolower() %>% # Converte para minusculo
+    return() # Retorno da funcao
+}
+```
+
+
+### Stop words
+
+*Palavras que podem se retiradas*
+
+```{r function words}
+# Lista de palavras para remover
+palavrasRemover <- c(stopwords(kind = "pt"), letters) %>%
+  as.tibble() %>% 
+  rename(Palavra = value) %>% 
+  mutate(Palavra = NormalizaParaTextMining(Palavra))
+```
+
+
+### Tabela de palavras
+
+```{r file to analyze}
+# Arquivo pdf
+arquivoPdf <- "https://www.ufrgs.br/wiki-r/images/3/33/GestaoDeClientes.pdf"
+```
+
+### Organiza o texto como tabela de palavras e frequências
+
+```{r organize data}
+# Cria tabela com palavras e frequencias
+frequenciaPalavras <- arquivoPdf %>% 
+  read_pdf() %>% 
+  as.tibble() %>% 
+  select(text) %>% 
+  unnest_tokens(Palavra, text) %>% 
+  mutate(Palavra = NormalizaParaTextMining(Palavra)) %>% 
+  anti_join(palavrasRemover) %>% 
+  count(Palavra, sort = TRUE) %>% 
+  filter(Palavra != "")
+
+# Visualiza frequencia de palavras
+frequenciaPalavras
+```
+
+
+### Nuvem de palavras
+
+```{r word cloud}
+# Cria nuvem de palavras
+wordcloud(
+  words = frequenciaPalavras$Palavra, 
+  freq = frequenciaPalavras$n,
+  min.freq = 1,
+  max.words = 200, 
+  random.order = FALSE, 
+  rot.per = 0.35, 
+  colors = brewer.pal(8, "Dark2")
+)
+```
+
